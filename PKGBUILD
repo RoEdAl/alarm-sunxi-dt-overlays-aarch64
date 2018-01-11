@@ -68,7 +68,7 @@ Target = boot/dtbs/allwinner/overlay/${OVL_PREFIX}-*.dtbo
 Target = etc/conf.d/${OVL_PREFIX}
 
 [Action]
-Description = Updating ${SOC_NAME} overlays
+Description = Updating ${SOC_NAME} DT overlays
 Depends = ${OVL_PREFIX}-dt-overlays
 When = PostTransaction
 Exec = /usr/bin/upd-${OVL_PREFIX}-dt-overlays
