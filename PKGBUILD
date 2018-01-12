@@ -2,17 +2,55 @@
 # Device Tree overlays for sunxi devices
 #
 
+_dto_packages=(
+	'analog-codec'
+	'cir'
+	'usbhost0'
+	'usbhost1'
+	'usbhost2'
+	'usbhost3'
+	'i2c0'
+	'i2c1'
+	'i2c2'
+	'uart1'
+	'uart2'
+	'uart3'
+	'pwm'
+	'pps-gpio'
+	'w1-gpio'
+	'spdif-out'
+	'spi-add-cs1'
+	'spi-jedec-nor'
+	'spi-spidev'
+)
+
+_dto_packages_desc=(
+	'analog codec'
+	'CIR receiver'
+	'USB host controler 0'
+	'USB host controler 1'
+	'USB host controler 2'
+	'USB host controler 3'
+	'TWI/I2C bus 0'
+	'TWI/I2C bus 1'
+	'TWI/I2C bus 2'
+	'serial port 1'
+	'serial port 2'
+	'serial port 3'
+	'hardware PWM controller'
+	'pulse-per-second GPIO client'
+	'1-Wire GPIO master'
+	'SPDiF/Toslink audio output'
+	'SPI chip select 1 with GPIO'
+	'MTD support for JEDEC compatible SPI NOR flash'
+	'SPIdev device node (/dev/spidevX.Y) for userspace SPI access'
+)
+
 pkgbase='sunxi-dt-overlays'
 pkgname=(
 	'sunxi-dt-overlays-toolkit'
 	'sun50i-h5-dt-overlays'
-	'sun50i-h5-dto-analog-codec'
-	'sun50i-h5-dto-cir'
-	'sun50i-h5-dto-usbhost0'
-	'sun50i-h5-dto-usbhost1'
-	'sun50i-h5-dto-usbhost2'
-	'sun50i-h5-dto-usbhost3'
-)
+	"${_dto_packages[@]/#/sun50i-h5-dto-}")
 pkgdesc='Device Tree overlays for sunxi devices'
 pkgver=r54.4dfd904
 pkgrel=1
@@ -36,25 +74,34 @@ pkgver() {
   printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
+_build_dtbo() {
+  local PFX=$1
+  shift
+  local DESC=$1
+  shift
+
+  for DTS; do
+    msg2 "DTS[${PFX}]: ${DTS}"
+    dtc -@ -Wno-unit_address_vs_reg -Wno-gpios_property -I dts -O dtb -o "${PFX}/${PFX}-${DTS}.dtbo" "${PFX}/${PFX}-${DTS}.dts"
+  done
+
+  mkimage -A arm64 -O linux -T script -C none -n "${DESC} fixup" -d "${PFX}/${PFX}-fixup.scr-cmd" "${PFX}/${PFX}-fixup.scr"
+}
+
 build() {
   cd "${srcdir}/sunxi-dto"
 
-  for DTS in sun50i-h5/*.dts; do
-     msg2 "DTS: ${DTS}"
-     dtc -@ --warning no-unit_address_vs_reg --warning no-gpios_property -I dts -O dtb -o "${DTS/%.dts/.dtbo}" $DTS
-  done
-
-  mkimage -A arm64 -O linux -T script -C none -n "Allwinner H5 fixup" -d sun50i-h5/sun50i-h5-fixup.scr-cmd sun50i-h5/sun50i-h5-fixup.scr
+  _build_dtbo 'sun50i-h5' 'Allwinner H5' "${_dto_packages[@]}"
 }
 
 package_sunxi-dt-overlays-toolkit() {
-  pkgdesc='Device Tree overlays toolkit for Sunxi SoCs'
+  pkgdesc='DT overlays toolkit for SunXi SoCs'
 
   install -Dm755 "${srcdir}/upd-sunxi-dt-overlays.sh" "${pkgdir}/usr/share/sunxi-dt-overlays/upd-sunxi-dt-overlays.sh"
 }
 
 # hook template
-create_ovl_hook() {
+_create_ovl_hook() {
   local OVL_PREFIX=$1
   local SOC_NAME=$2
   local BASE_DIR=$3
@@ -76,81 +123,207 @@ EOF
   ) >> "${BASE_DIR}/usr/share/libalpm/hooks/98-upd-${OVL_PREFIX}-dt-overlays.hook"
 }
 
+_get_dto_packages_with_desc() {
+  for (( i = 0 ; i < ${#_dto_packages[@]} ; i++ ))
+  do
+    echo "sun50i-h5-dto-${_dto_packages[$i]}: ${_dto_packages_desc[$i]}"
+  done
+}
+
 package_sun50i-h5-dt-overlays() {
-  pkgdesc='Device Tree overlays for Allwinner H5 SoC'
+  pkgdesc='DT overlays for Allwinner H5 SoC'
   depends=($_linux_kernel_pkg 'sunxi-dt-overlays-toolkit')
+
+  OLD_IFS=${IFS}
+  IFS=$'\n'
+  local _optdepends=( $(_get_dto_packages_with_desc) )
+  IFS=${OLD_IFS}
+  optdepends=( "${_optdepends[@]}" )
+
   groups=('sun50i-h5-dto')
   backup=('boot/overlays.txt')
   provides=('sunxi-dt-overlays')
   conflicts=('sunxi-dt-overlays')
-  
+ 
   install -dm755 ${pkgdir}/usr/bin
   ln -s /usr/share/sunxi-dt-overlays/upd-sunxi-dt-overlays.sh ${pkgdir}/usr/bin/upd-sun50i-h5-dt-overlays
 
   install -dm755 "${pkgdir}/usr/share/libalpm/hooks"
-  create_ovl_hook 'sun50i-h5' 'Allwinner H5' "${pkgdir}"
+  _create_ovl_hook 'sun50i-h5' 'Allwinner H5' "${pkgdir}"
   install -Dm644 "${srcdir}/overlays.txt" "${pkgdir}/boot/overlays.txt"
 
   cd "${srcdir}/sunxi-dto"
   install -Dm644 'sun50i-h5/sun50i-h5-fixup.scr' "${pkgdir}/boot/dtbs/allwinner/overlay/sun50i-h5-fixup.scr"
 }
 
+_install_dtbo() {
+  local PFX=$1
+  shift
+
+  for DTBO; do
+    install -Dm644 "${srcdir}/sunxi-dto/${PFX}/${PFX}-${DTBO}.dtbo" "${pkgdir}/boot/dtbs/allwinner/overlay/${PFX}-${DTBO}.dtbo"
+  done
+}
+
+_get_package_desc() {
+  for (( i = 0 ; i < ${#_dto_packages[@]} ; i++ ))
+  do
+    if [[ ${_dto_packages[$i]} == $1 ]]; then
+      echo "Device Tree overlay for Allwinner H5 SoC - ${_dto_packages_desc[$i]}"
+      return 0
+    fi
+  done
+  return 1
+}
+
 package_sun50i-h5-dto-analog-codec() {
-  pkgdesc='Device Tree overlay for Allwinner H5 SoC - analog codec driver'
+  pkgdesc="$(_get_package_desc analog-codec)"
   groups=('sun50i-h5-dto')
   depends=('sun50i-h5-dt-overlays')
 
-  cd "${srcdir}/sunxi-dto"
-
-  install -Dm644 'sun50i-h5/sun50i-h5-analog-codec.dtbo' "${pkgdir}/boot/dtbs/allwinner/overlay/sun50i-h5-analog-codec.dtbo"
+  _install_dtbo 'sun50i-h5' 'analog-codec'
 }
 
 package_sun50i-h5-dto-cir() {
-  pkgdesc='Device Tree overlay for Allwinner H5 SoC - CIR receiver'
+  pkgdesc="$(_get_package_desc cir)"
   groups=('sun50i-h5-dto')
   depends=('sun50i-h5-dt-overlays')
 
-  cd "${srcdir}/sunxi-dto"
-
-  install -Dm644 'sun50i-h5/sun50i-h5-cir.dtbo' "${pkgdir}/boot/dtbs/allwinner/overlay/sun50i-h5-cir.dtbo"
+   _install_dtbo 'sun50i-h5' 'cir'
 }
 
 package_sun50i-h5-dto-usbhost0() {
-  pkgdesc='Device Tree overlay for Allwinner H5 SoC - USB host controler 0'
+  pkgdesc="$(_get_package_desc usbhost0)"
   groups=('sun50i-h5-dto')
   depends=('sun50i-h5-dt-overlays')
 
-  cd "${srcdir}/sunxi-dto"
-
-  install -Dm644 'sun50i-h5/sun50i-h5-usbhost0.dtbo' "${pkgdir}/boot/dtbs/allwinner/overlay/sun50i-h5-usbhost0.dtbo"
+   _install_dtbo 'sun50i-h5' 'usbhost0'
 }
 
 package_sun50i-h5-dto-usbhost1() {
-  pkgdesc='Device Tree overlay for Allwinner H5 SoC - USB host controler 1'
+  pkgdesc="$(_get_package_desc usbhost1)"
   groups=('sun50i-h5-dto')
   depends=('sun50i-h5-dt-overlays')
-
-  cd "${srcdir}/sunxi-dto"
-
-  install -Dm644 'sun50i-h5/sun50i-h5-usbhost1.dtbo' "${pkgdir}/boot/dtbs/allwinner/overlay/sun50i-h5-usbhost1.dtbo"
+  
+   _install_dtbo 'sun50i-h5' 'usbhost1'
 }
 
 package_sun50i-h5-dto-usbhost2() {
-  pkgdesc='Device Tree overlay for Allwinner H5 SoC - USB host controler 2'
+  pkgdesc="$(_get_package_desc usbhost2)"
   groups=('sun50i-h5-dto')
   depends=('sun50i-h5-dt-overlays')
 
-  cd "${srcdir}/sunxi-dto"
-
-  install -Dm644 'sun50i-h5/sun50i-h5-usbhost2.dtbo' "${pkgdir}/boot/dtbs/allwinner/overlay/sun50i-h5-usbhost2.dtbo"
+   _install_dtbo 'sun50i-h5' 'usbhost2'
 }
 
 package_sun50i-h5-dto-usbhost3() {
-  pkgdesc='Device Tree overlay for Allwinner H5 SoC - USB host controler 3'
+  pkgdesc="$(_get_package_desc usbhost3)"
   groups=('sun50i-h5-dto')
   depends=('sun50i-h5-dt-overlays')
 
-  cd "${srcdir}/sunxi-dto"
+   _install_dtbo 'sun50i-h5' 'usbhost3'
+}
 
-  install -Dm644 'sun50i-h5/sun50i-h5-usbhost3.dtbo' "${pkgdir}/boot/dtbs/allwinner/overlay/sun50i-h5-usbhost3.dtbo"
+package_sun50i-h5-dto-i2c0() {
+  pkgdesc="$(_get_package_desc i2c0)"
+  groups=('sun50i-h5-dto')
+  depends=('sun50i-h5-dt-overlays')
+
+   _install_dtbo 'sun50i-h5' 'i2c0'
+}
+
+package_sun50i-h5-dto-i2c1() {
+  pkgdesc="$(_get_package_desc i2c1)"
+  groups=('sun50i-h5-dto')
+  depends=('sun50i-h5-dt-overlays')
+
+   _install_dtbo 'sun50i-h5' 'i2c1'
+}
+
+package_sun50i-h5-dto-i2c2() {
+  pkgdesc="$(_get_package_desc i2c2)"
+  groups=('sun50i-h5-dto')
+  depends=('sun50i-h5-dt-overlays')
+
+   _install_dtbo 'sun50i-h5' 'i2c2'
+}
+
+package_sun50i-h5-dto-uart1() {
+  pkgdesc="$(_get_package_desc uart1)"
+  groups=('sun50i-h5-dto')
+  depends=('sun50i-h5-dt-overlays')
+
+   _install_dtbo 'sun50i-h5' 'uart1'
+}
+
+package_sun50i-h5-dto-uart2() {
+  pkgdesc="$(_get_package_desc uart2)"
+  groups=('sun50i-h5-dto')
+  depends=('sun50i-h5-dt-overlays')
+
+   _install_dtbo 'sun50i-h5' 'uart2'
+}
+
+package_sun50i-h5-dto-uart3() {
+  pkgdesc="$(_get_package_desc uart3)"
+  groups=('sun50i-h5-dto')
+  depends=('sun50i-h5-dt-overlays')
+
+   _install_dtbo 'sun50i-h5' 'uart3'
+}
+
+package_sun50i-h5-dto-pwm() {
+  pkgdesc="$(_get_package_desc pwm)"
+  groups=('sun50i-h5-dto')
+  depends=('sun50i-h5-dt-overlays')
+
+   _install_dtbo 'sun50i-h5' 'pwm'
+}
+
+package_sun50i-h5-dto-spdif-out() {
+  pkgdesc="$(_get_package_desc spdif-out)"
+  groups=('sun50i-h5-dto')
+  depends=('sun50i-h5-dt-overlays')
+
+   _install_dtbo 'sun50i-h5' 'spdif-out'
+}
+
+package_sun50i-h5-dto-pps-gpio() {
+  pkgdesc="$(_get_package_desc pps-gpio)"
+  groups=('sun50i-h5-dto')
+  depends=('sun50i-h5-dt-overlays')
+
+   _install_dtbo 'sun50i-h5' 'pps-gpio'
+}
+
+package_sun50i-h5-dto-w1-gpio() {
+  pkgdesc="$(_get_package_desc w1-gpio)"
+  groups=('sun50i-h5-dto')
+  depends=('sun50i-h5-dt-overlays')
+
+   _install_dtbo 'sun50i-h5' 'w1-gpio'
+}
+
+package_sun50i-h5-dto-spi-jedec-nor() {
+  pkgdesc="$(_get_package_desc spi-jedec-nor)"
+  groups=('sun50i-h5-dto')
+  depends=('sun50i-h5-dt-overlays')
+
+   _install_dtbo 'sun50i-h5' 'spi-jedec-nor'
+}
+
+package_sun50i-h5-dto-spi-spidev() {
+  pkgdesc="$(_get_package_desc spi-spidev)"
+  groups=('sun50i-h5-dto')
+  depends=('sun50i-h5-dt-overlays')
+
+   _install_dtbo 'sun50i-h5' 'spi-spidev'
+}
+
+package_sun50i-h5-dto-spi-add-cs1() {
+  pkgdesc="$(_get_package_desc spi-add-cs1)"
+  groups=('sun50i-h5-dto')
+  depends=('sun50i-h5-dt-overlays')
+
+   _install_dtbo 'sun50i-h5' 'spi-add-cs1'
 }
