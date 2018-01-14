@@ -48,7 +48,6 @@ _dto_packages_desc=(
 
 pkgbase='sunxi-dt-overlays'
 pkgname=(
-	'sunxi-dt-overlays-toolkit'
 	'sun50i-h5-dt-overlays'
 	"${_dto_packages[@]/#/sun50i-h5-dto-}")
 pkgdesc='Device Tree overlays for sunxi devices'
@@ -62,11 +61,9 @@ makedepends=('git' 'dtc' 'uboot-tools')
 options=('!strip')
 
 source=('sunxi-dto::git+https://github.com/armbian/sunxi-DT-overlays.git'
-	'upd-sunxi-dt-overlays.sh'
 	'overlays.txt'
 )
 md5sums=('SKIP'
-         'd4b39becf44d92e8578f82eddf5e7f37'
          '4d77cc0476d2f522e70f74573caeda31')
 
 pkgver() {
@@ -92,12 +89,6 @@ build() {
   cd "${srcdir}/sunxi-dto"
 
   _build_dtbo 'sun50i-h5' 'Allwinner H5' "${_dto_packages[@]}"
-}
-
-package_sunxi-dt-overlays-toolkit() {
-  pkgdesc='DT overlays toolkit for SunXi SoCs'
-
-  install -Dm755 "${srcdir}/upd-sunxi-dt-overlays.sh" "${pkgdir}/usr/share/sunxi-dt-overlays/upd-sunxi-dt-overlays.sh"
 }
 
 # hook template

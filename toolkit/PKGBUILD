@@ -1,0 +1,20 @@
+#
+# DT overlays toolkit for SunXi SoCs
+#
+
+pkgname='sunxi-dt-overlays-toolkit'
+pkgdesc='DT overlays toolkit for SunXi SoCs'
+pkgver=1.0
+pkgrel=1
+arch=('aarch64')
+url='http://github.com/armbian/sunxi-DT-overlays'
+license=('GPL2')
+
+source=('upd-sunxi-dt-overlays.sh')
+md5sums=('d4b39becf44d92e8578f82eddf5e7f37')
+
+package() {
+  pkgdesc='DT overlays toolkit for SunXi SoCs'
+
+  install -Dm755 "${srcdir}/upd-sunxi-dt-overlays.sh" "${pkgdir}/usr/share/sunxi-dt-overlays/upd-sunxi-dt-overlays.sh"
+}
