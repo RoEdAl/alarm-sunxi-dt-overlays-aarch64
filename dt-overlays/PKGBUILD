@@ -61,9 +61,11 @@ makedepends=('git' 'dtc' 'uboot-tools')
 options=('!strip')
 
 source=('sunxi-dto::git+https://github.com/armbian/sunxi-DT-overlays.git'
+	'params'
 	'overlays.txt'
 )
 md5sums=('SKIP'
+         'b7e02a71ea67909d46152f2044b1f9db'
          '4d77cc0476d2f522e70f74573caeda31')
 
 pkgver() {
@@ -125,14 +127,14 @@ package_sun50i-h5-dt-overlays() {
   pkgdesc='DT overlays for Allwinner H5 SoC'
   depends=($_linux_kernel_pkg 'sunxi-dt-overlays-toolkit')
 
-  OLD_IFS=${IFS}
+  local OLD_IFS=${IFS}
   IFS=$'\n'
   local _optdepends=( $(_get_dto_packages_with_desc) )
   IFS=${OLD_IFS}
   optdepends=( "${_optdepends[@]}" )
 
   groups=('sun50i-h5-dto')
-  backup=('boot/overlays.txt')
+  backup=('boot/overlays.txt' 'etc/conf.d/sun50i-h5')
   provides=('sunxi-dt-overlays')
   conflicts=('sunxi-dt-overlays')
  
@@ -142,6 +144,8 @@ package_sun50i-h5-dt-overlays() {
   install -dm755 "${pkgdir}/usr/share/libalpm/hooks"
   _create_ovl_hook 'sun50i-h5' 'Allwinner H5' "${pkgdir}"
   install -Dm644 "${srcdir}/overlays.txt" "${pkgdir}/boot/overlays.txt"
+
+  install -Dm644 "${srcdir}/params" "${pkgdir}/etc/conf.d/sun50i-h5"
 
   cd "${srcdir}/sunxi-dto"
   install -Dm644 'sun50i-h5/sun50i-h5-fixup.scr' "${pkgdir}/boot/dtbs/allwinner/overlay/sun50i-h5-fixup.scr"

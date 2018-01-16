@@ -29,7 +29,7 @@ CONF_FILE=/etc/conf.d/${OVL_PREFIX}
 overlay_prefix=$OVL_PREFIX
 overlays=${OVLS[*]}
 EOF
-if [[ -r ${CONF_FILE} && -s ${CONF_FILE} ]]; then
+if [[ ${#OVLS[*]} -gt 0 && -r ${CONF_FILE} && -s ${CONF_FILE} ]]; then
     cat ${CONF_FILE}
 fi
 ) > $OVL_FILE

@@ -1,0 +1,24 @@
+#
+# Paramteters description at:
+# http://github.com/armbian/sunxi-DT-overlays/tree/master/sun50i-h5
+#
+# <pps-gpio>
+#param_pps_pin=PD14
+#param_pps_falling_edge=0
+# <spi-jedec-nor>
+#param_spinor_spi_bus=0
+#param_spinor_spi_cs=0
+param_spinor_max_freq=1000000
+# <spi-spidev>
+#param_spidev_spi_bus=0
+#param_spidev_spi_cs=0
+#param_spidev_max_freq=1000000
+# <uart1>
+#param_uart1_rtscts=0
+# <uart2>
+#param_uart2_rtscts=0
+# <uart3>
+#param_uart3_rtscts=0
+# <w1-gpio>
+#param_w1_pin=PD14
+#param_w1_pin_int_pullup=0
