@@ -51,7 +51,7 @@ pkgname=(
 	'sun50i-h5-dt-overlays'
 	"${_dto_packages[@]/#/sun50i-h5-dto-}")
 pkgdesc='Device Tree overlays for sunxi devices'
-pkgver=r54.4dfd904
+pkgver=r55.ede1d1c
 pkgrel=1
 arch=('aarch64')
 _linux_kernel_pkg='linux-aarch64-rc'
@@ -60,7 +60,7 @@ license=('GPL2')
 makedepends=('git' 'dtc' 'uboot-tools')
 options=('!strip')
 
-source=('sunxi-dto::git+https://github.com/armbian/sunxi-DT-overlays.git'
+source=('sunxi-dto::git+https://github.com/RoEdAl/sunxi-DT-overlays.git#branch=linux-v4.15'
 	'params'
 	'overlays.txt'
 )
